@@ -1,141 +1,170 @@
-const X_CLASS = 'x'
-const CIRCLE_CLASS = 'o'
+const X_CLASS_NAME = 'x'
+const O_CLASS_NAME = 'o'
 const WINNING_COMBINATIONS = [
-  [0, 1, 2],
-  [3, 4, 5],
-  [6, 7, 8],
-  [0, 3, 6],
+  [1, 2, 3],
+  [4, 5, 6],
+  [7, 8, 9],
   [1, 4, 7],
   [2, 5, 8],
-  [0, 4, 8],
-  [2, 4, 6]
+  [3, 6, 9],
+  [1, 5, 9],
+  [3, 5, 7]
 ]
 
-let board2 = [
+let boardMinMax = [
   ['','',''],
   ['','',''],
   ['','','']
 ]
 
+const boardElement = document.getElementById('board')
 const cellElements = document.querySelectorAll('[data-cell]')
-const board = document.getElementById('board')
 const winningMessageElement = document.getElementById('winningMessage')
-const restartButton = document.getElementById('restartButton')
 const winningMessageTextElement = document.querySelector('[data-winning-message-text]')
-let circleTurn
+const restartButton = document.getElementById('restartButton')
+
+let isCircleTurn
 
 startGame()
 
 restartButton.addEventListener('click', startGame)
 
 function startGame() {
-  circleTurn = false
+  isCircleTurn = false
+  cleanElementCells()
+  cleanBoardsMinMax()
+  setBoardHoverClassOnCells()
+  winningMessageElement.classList.remove('show')
+}
+
+function cleanElementCells(){
   cellElements.forEach(cell => {
-    cell.classList.remove(X_CLASS)
-    cell.classList.remove(CIRCLE_CLASS)
+    cell.classList.remove(X_CLASS_NAME)
+    cell.classList.remove(O_CLASS_NAME)
     cell.removeEventListener('click', handleClick)
     cell.addEventListener('click', handleClick, { once: true })
   })
-  setBoardHoverClass()
-  winningMessageElement.classList.remove('show')
+}
+
+function cleanBoardsMinMax(){
+  boardMinMax = [
+    ['','',''],
+    ['','',''],
+    ['','','']
+  ]
+}
+
+
+function setBoardHoverClassOnCells() {
+  boardElement.classList.remove(X_CLASS_NAME)
+  boardElement.classList.remove(O_CLASS_NAME)
+  if (isCircleTurn) {
+    boardElement.classList.add(O_CLASS_NAME)
+  } else {
+    boardElement.classList.add(X_CLASS_NAME)
+  }
 }
 
 function handleClick(e) {
   const cell = e.target
-  const currentClass = circleTurn ? CIRCLE_CLASS : X_CLASS
-  placeMark(cell, currentClass)
-  if (checkWin(currentClass)) {
+  const currentClassName = isCircleTurn ? O_CLASS_NAME : X_CLASS_NAME
+  placeMark(cell, currentClassName)
+  if (checkWinner(currentClassName)) {
     endGame(false)
   } else if (isDraw()) {
     endGame(true)
   } else {
     swapTurns()
-    setBoardHoverClass()
+    playIA()
+    swapTurns()
+    setBoardHoverClassOnCells()
   }
 }
 
-function endGame(draw) {
-  if (draw) {
-    winningMessageTextElement.innerText = 'Draw!'
-  } else {
-    winningMessageTextElement.innerText = `${circleTurn ? "O's" : "X's"} Wins!`
-  }
-  winningMessageElement.classList.add('show')
-}
-
-function isDraw() {
-  return [...cellElements].every(cell => {
-    return cell.classList.contains(X_CLASS) || cell.classList.contains(CIRCLE_CLASS)
-  })
-}
-
-function placeMark(cell, currentClass) {
-  console.log("placeMark.currentClass: " + currentClass)
-  cell.classList.add(currentClass)
-  console.log("placeMark.cellName: " + cell.getAttribute("name"))
-
-  var l = cell.getAttribute("name").substring(0,1)-1
-  var c = cell.getAttribute("name").substring(1,2)-1
-  console.log("placeMark.cellPosition: " + l + " " + c)
-  board2[l][c] = currentClass
-  console.log("placeMark.Board2: " + board2)
-}
-
-function swapTurns() {
-  circleTurn = !circleTurn
-  if(circleTurn) bestMove()
-  circleTurn = !circleTurn
-}
-
-function setBoardHoverClass() {
-  board.classList.remove(X_CLASS)
-  board.classList.remove(CIRCLE_CLASS)
-  if (circleTurn) {
-    board.classList.add(CIRCLE_CLASS)
-  } else {
-    board.classList.add(X_CLASS)
+function playIA(){
+  const currentClassName = isCircleTurn ? O_CLASS_NAME : X_CLASS_NAME
+  if(isCircleTurn){
+    performBestMove()
+    if (checkWinner(currentClassName)) {
+      endGame(false)
+    } else if (isDraw()) {
+      endGame(true)
+    }
   }
 }
 
-function checkWin(currentClass) {
+function placeMark(cell, currentClassName) {
+  //console.log("placeMark.currentClassName: " + currentClassName)
+
+  cell.classList.add(currentClassName)
+  //console.log("placeMark.cell.name: " + cell.getAttribute("name"))
+
+  var xPositon = cell.getAttribute("name").substring(0,1)
+  var yPosition = cell.getAttribute("name").substring(1,2)
+
+  updateMinMaxBoard(xPositon, yPosition, currentClassName)
+}
+
+function updateMinMaxBoard(xPositon, yPosition, currentClassName) {
+  //console.log("placeMark.cell.position: " + xPositon + yPosition)
+  boardMinMax[xPositon - 1][yPosition - 1] = currentClassName
+
+  //console.log("placeMark.boardFoxMinMaxCalculation: " + boardMinMax)
+}
+
+function checkWinner(currentClass) {
   return WINNING_COMBINATIONS.some(combination => {
     return combination.every(index => {
-      return cellElements[index].classList.contains(currentClass)
+      return cellElements[index-1].classList.contains(currentClass)
     })
   })
 }
 
-// Tic Tac Toe AI with Minimax Algorithm
-// The Coding Train / Daniel Shiffman
-// https://thecodingtrain.com/CodingChallenges/154-tic-tac-toe-minimax.html
-// https://youtu.be/I64-UTORVfU
-// https://editor.p5js.org/codingtrain/sketches/0zyUhZdJD
+function isDraw() {
+  return [...cellElements].every(cell => {
+    return cell.classList.contains(X_CLASS_NAME) || cell.classList.contains(O_CLASS_NAME)
+  })
+}
 
-function bestMove() {
+function endGame(isDraw) {
+  if (isDraw) {
+    winningMessageTextElement.innerText = 'Draw!'
+  } else {
+    winningMessageTextElement.innerText = `${isCircleTurn ? "O's" : "X's"} wins!`
+  }
+  winningMessageElement.classList.add('show')
+}
+
+
+function swapTurns() {
+  isCircleTurn = !isCircleTurn
+}
+
+function performBestMove() {
   // AI to make its turn
   let bestScore = -Infinity;
   let move;
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
       // Is the spot available?
-      if (board2[i][j] == '') {
-        board2[i][j] = "o";
-        let score = minimax(board2, 0, false);
-        board2[i][j] = '';
-        //console.log("here"+score)
+      if (boardMinMax[i][j] == '') {
+        boardMinMax[i][j] = "o";
+        let score = minimax(boardMinMax, 0, false);
+        boardMinMax[i][j] = '';
+        ////console.log("here"+score)
         if (score > bestScore) {
           bestScore = score;
-          //console.log("score "+score)
+          ////console.log("score "+score)
           move = { i, j };
         }
       }
     }
   }
-  board2[move.i][move.j] = "o";
-  console.log("bestMove: "+(move.i+1)+" "+(move.j+1))
+  boardMinMax[move.i][move.j] = "o";
+  //console.log("bestMove: "+(move.i+1)+" "+(move.j+1))
   cell = document.getElementsByName((move.i+1)+""+(move.j+1))[0]
-  console.log("bestMove.cellName:" + cell.getAttribute("name"))
-  placeMark(cell, CIRCLE_CLASS)
+  //console.log("bestMove.cellName:" + cell.getAttribute("name"))
+  placeMark(cell, O_CLASS_NAME)
 }
 
 let scores = {
@@ -144,8 +173,8 @@ let scores = {
   tie: 0
 };
 
-function minimax(board2, depth, isMaximizing) {
-  let result = checkWinner();
+function minimax(boardFoxMinMaxCalculation, depth, isMaximizing) {
+  let result = checkWinnerMinMax();
   if (result !== null) {
     return scores[result];
   }
@@ -154,10 +183,10 @@ function minimax(board2, depth, isMaximizing) {
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
         // Is the spot available?
-        if (board2[i][j] == '') {
-          board2[i][j] = "o";
-          let score = minimax(board2, depth + 1, false);
-          board2[i][j] = '';
+        if (boardFoxMinMaxCalculation[i][j] == '') {
+          boardFoxMinMaxCalculation[i][j] = "o";
+          let score = minimax(boardFoxMinMaxCalculation, depth + 1, false);
+          boardFoxMinMaxCalculation[i][j] = '';
           bestScore = Math.max(score, bestScore);
         }
       }
@@ -168,10 +197,10 @@ function minimax(board2, depth, isMaximizing) {
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
         // Is the spot available?
-        if (board2[i][j] == '') {
-          board2[i][j] = "x";
-          let score = minimax(board2, depth + 1, true);
-          board2[i][j] = '';
+        if (boardFoxMinMaxCalculation[i][j] == '') {
+          boardFoxMinMaxCalculation[i][j] = "x";
+          let score = minimax(boardFoxMinMaxCalculation, depth + 1, true);
+          boardFoxMinMaxCalculation[i][j] = '';
           bestScore = Math.min(score, bestScore);
         }
       }
@@ -184,35 +213,35 @@ function equals3(a, b, c) {
   return a == b && b == c && a != '';
 }
 
-function checkWinner() {
+function checkWinnerMinMax() {
   let winner = null;
 
   // horizontal
   for (let i = 0; i < 3; i++) {
-    if (equals3(board2[i][0], board2[i][1], board2[i][2])) {
-      winner = board2[i][0];
+    if (equals3(boardMinMax[i][0], boardMinMax[i][1], boardMinMax[i][2])) {
+      winner = boardMinMax[i][0];
     }
   }
 
   // Vertical
   for (let i = 0; i < 3; i++) {
-    if (equals3(board2[0][i], board2[1][i], board2[2][i])) {
-      winner = board2[0][i];
+    if (equals3(boardMinMax[0][i], boardMinMax[1][i], boardMinMax[2][i])) {
+      winner = boardMinMax[0][i];
     }
   }
 
   // Diagonal
-  if (equals3(board2[0][0], board2[1][1], board2[2][2])) {
-    winner = board2[0][0];
+  if (equals3(boardMinMax[0][0], boardMinMax[1][1], boardMinMax[2][2])) {
+    winner = boardMinMax[0][0];
   }
-  if (equals3(board2[2][0], board2[1][1], board2[0][2])) {
-    winner = board2[2][0];
+  if (equals3(boardMinMax[2][0], boardMinMax[1][1], boardMinMax[0][2])) {
+    winner = boardMinMax[2][0];
   }
 
   let openSpots = 0;
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {
-      if (board2[i][j] == '') {
+      if (boardMinMax[i][j] == '') {
         openSpots++;
       }
     }
